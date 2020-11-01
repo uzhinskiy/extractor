@@ -4,7 +4,6 @@ import (
         "log"
         "mime"
         "net/http"
-        "os"
         "path"
         "strings"
 )
