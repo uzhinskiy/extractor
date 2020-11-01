@@ -6,6 +6,7 @@ import (
         "net/http"
         "path"
         "strings"
+	"github.com/uzhinskiy/extractor/modules/front"
 )
 
 func staticHandler(w http.ResponseWriter, r *http.Request) {
