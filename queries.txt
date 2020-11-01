@@ -1,0 +1,105 @@
+Q:
+GET /_cat/repositories
+R:
+[
+  {
+    "id" : "s3-backup",
+    "type" : "s3"
+  }
+]
+
+
+Q:
+GET /_cat/nodes?format=json&h=i,n,id,dt,du,dup,d
+R:
+[
+  {
+    "i" : "10.244.1.98",
+    "n" : "opendistro-0",
+    "id" : "v5Sz",
+    "dt" : "392.7gb",
+    "du" : "130.2gb",
+    "dup" : "33.16",
+    "d" : "262.4gb"
+  },
+  {
+    "i" : "10.244.15.42",
+    "n" : "opendistro-1",
+    "id" : "9HC5",
+    "dt" : "294.2gb",
+    "du" : "171.3gb",
+    "dup" : "58.23",
+    "d" : "122.9gb"
+  },
+  {
+    "i" : "10.244.13.132",
+    "n" : "opendistro-2",
+    "id" : "HMse",
+    "dt" : "392.7gb",
+    "du" : "295.7gb",
+    "dup" : "75.30",
+    "d" : "97gb"
+  }
+]
+
+Q:
+GET /_cat/snapshots/s3-backup?format=json
+R:
+[
+  {
+    "id" : "filebeat-2020.09.01",
+    "status" : "SUCCESS",
+    "start_epoch" : "1598928300",
+    "start_time" : "02:45:00",
+    "end_epoch" : "1598929917",
+    "end_time" : "03:11:57",
+    "duration" : "26.9m",
+    "indices" : "1",
+    "successful_shards" : "1",
+    "failed_shards" : "0",
+    "total_shards" : "1"
+  }
+]
+
+Q:
+GET /_snapshot/s3-backup/filebeat-2020.09.03
+R:
+{
+  "snapshots" : [
+    {
+      "snapshot" : "filebeat-2020.09.03",
+      "uuid" : "uPAQm3QPRtWJxIoXnXoSCg",
+      "version_id" : 7080099,
+      "version" : "7.8.0",
+      "indices" : [
+        "filebeat-2020.09.02"
+      ],
+      "include_global_state" : true,
+      "state" : "SUCCESS",
+      "start_time" : "2020-09-03T02:45:00.482Z",
+      "start_time_in_millis" : 1599101100482,
+      "end_time" : "2020-09-03T03:05:40.416Z",
+      "end_time_in_millis" : 1599102340416,
+      "duration_in_millis" : 1239934,
+      "failures" : [ ],
+      "shards" : {
+        "total" : 1,
+        "failed" : 0,
+        "successful" : 1
+      }
+    }
+  ]
+}
+
+Q:
+POST /_snapshot/my_repository/snapshot_2/_restore?wait_for_completion=false
+{
+  "indices": "index_1,index_2",
+  "ignore_unavailable": true,
+  "include_global_state": false,
+  "rename_pattern": "index_(.+)",
+  "rename_replacement": "restored_index_$1",
+  "include_aliases": false
+}
+
+

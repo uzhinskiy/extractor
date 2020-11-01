@@ -1,0 +1,26 @@
+[
+  {
+    "ip" : "10.244.1.98",
+    "name" : "opendistro-0",
+    "disktotal" : "392.7gb",
+    "diskused" : "130.2gb",
+    "diskusedp" : "33.16",
+    "diskavail" : "262.4gb"
+  },
+  {
+    "ip" : "10.244.15.42",
+    "name" : "opendistro-1",
+    "disktotal" : "294.2gb",
+    "diskused" : "171.3gb",
+    "diskusedp" : "78.23",
+    "diskavail" : "122.9gb"
+  },
+  {
+    "ip" : "10.244.13.132",
+    "name" : "opendistro-2",
+    "disktotal" : "392.7gb",
+    "diskused" : "295.7gb",
+    "diskusedp" : "65.30",
+    "diskavail" : "97gb"
+  }
+]
