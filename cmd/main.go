@@ -15,7 +15,7 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 		file = "/index.html"
 	}
 	cFile := strings.Replace(file, "/", "", 1)
-  data, err := Asset(cFile)
+  data, err := front.Asset(cFile)
 	if err != nil {
 		log.Println(err)
 	}
