@@ -12,7 +12,7 @@
 // index.html
 // DO NOT EDIT!
 
-package main
+package front
 
 import (
 	"bytes"
