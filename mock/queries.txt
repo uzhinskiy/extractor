@@ -94,12 +94,21 @@ R:
 Q:
 POST /_snapshot/my_repository/snapshot_2/_restore?wait_for_completion=false
 {
-  "indices": "index_1,index_2",
+  "indices": "mp-2020.11.01",
   "ignore_unavailable": true,
   "include_global_state": false,
-  "rename_pattern": "index_(.+)",
-  "rename_replacement": "restored_index_$1",
+  "rename_pattern": "(.+)",
+  "rename_replacement": "restored_$1",
   "include_aliases": false
 }
 
 
+curl -ks "https://opendistro:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wait_for_completion=false" -H "Content-type: application/json" -d'
+{
+  "indices": "mp-2020.11.01",
+  "ignore_unavailable": true,
+  "include_global_state": false,
+  "rename_pattern": "(.+)",
+  "rename_replacement": "restored_$1",
+  "include_aliases": false
+}'
