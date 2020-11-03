@@ -1,0 +1,6 @@
+app:
+  port: 9400
+elastic:
+  host: http://localhost:9200/
+  ssl: false
+  certfile: ./ca.crt
