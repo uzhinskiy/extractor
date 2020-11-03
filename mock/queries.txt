@@ -112,3 +112,6 @@ curl -ks "https://opendistro:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wai
   "rename_replacement": "restored_$1",
   "include_aliases": false
 }'
+
+
+

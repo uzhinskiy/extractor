@@ -8,6 +8,16 @@ import (
 	"path"
 	"strings"
 
+	"crypto/tls"
+	"errors"
+	"io/ioutil"
+
+	"bytes"
+	"net"
+
+	//	"reflect"
+	"time"
+
 	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/front"
 	"github.com/uzhinskiy/lib.go/helpers"
@@ -31,7 +41,7 @@ func Run(cnf config.Config) {
 	rt.conf = cnf
 	http.HandleFunc("/", rt.FrontHandler)
 	http.HandleFunc("/api/", rt.ApiHandler)
-	http.ListenAndServe(":9400", nil)
+	http.ListenAndServe(":"+cnf.App.Port, nil)
 }
 
 // web-ui
@@ -57,6 +67,7 @@ func (rt *Router) FrontHandler(w http.ResponseWriter, r *http.Request) {
 
 func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	var request apiRequest
+	var ok bool
 
 	defer r.Body.Close()
 	remoteIP := helpers.GetIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
@@ -89,26 +100,122 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	switch request.Action {
 	case "get_repositories":
 		{
-			w.Write([]byte("{\"OK\"}"))
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/repositories?format=json")
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			w.Write(response)
 		}
 	case "get_nodes":
 		{
-			w.Write([]byte("{\"OK\"}"))
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&h=ip,name,dt,du,dup,d")
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			w.Write(response)
 		}
 
 	case "get_snapshots":
 		{
-			w.Write([]byte("{\"OK\"}"))
+			var repo string
+			if repo, ok = request.Values["repo"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/snapshots/" + repo + "?format=json")
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			w.Write(response)
 		}
 
 	case "get_snapshot":
 		{
-			w.Write([]byte("{\"OK\"}"))
+			var repo string
+			var snap string
+			if repo, ok = request.Values["repo"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+
+			if snap, ok = request.Values["snapshot"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + repo + "/" + snap)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			w.Write(response)
 		}
 
 	case "restore":
 		{
-			w.Write([]byte("{\"OK\"}"))
+			/*
+				"values":{"repo":"my_backup","snapshot":"boris-2020.11.03",
+				"pattern":"(.+)",
+				"replacement":"restored_$1",
+				"indices":["boris"]
+			*/
+
+			var repo string
+			var snap string
+			var pattern string
+			var replacement string
+			if repo, ok = request.Values["repo"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+
+			if snap, ok = request.Values["snapshot"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			if pattern, ok = request.Values["pattern"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			if replacement, ok = request.Values["replacement"].(string); !ok {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+
+			req := map[string]interface{}{
+				"ignore_unavailable":   false,
+				"include_global_state": false,
+				"include_aliases":      false,
+				"rename_pattern":       pattern,
+				"rename_replacement":   replacement,
+			}
+			//indices: "mp-2020.11.01",
+
+			log.Println(request.Values["indices"].([]string))
+
+			/*
+				response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+repo+"/"+snap+"/_restore?wait_for_completion=false", data)
+				if err != nil {
+					http.Error(w, err.Error(), 500)
+					log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+					return
+				}
+				w.Write(response)
+			*/
 		}
 
 	default:
@@ -123,23 +230,22 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func doGet(url string, request apiRequest) (*RESPONSE_JSON, error) {
-	serviceResp := new(RESPONSE_JSON)
+func (rt *Router) doGet(url string) ([]byte, error) {
+
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: time.Duration(helpers.Atoi(appConfig["netdialtimeout"])) * time.Second,
+			Timeout: time.Duration(10) * time.Second,
 		}).Dial,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	var netClient = &http.Client{
-		Timeout:   time.Second * time.Duration(helpers.Atoi(appConfig["netclienttimeout"])),
+		Timeout:   time.Second * time.Duration(10),
 		Transport: netTransport,
 	}
 
-	toBackend, _ := json.Marshal(request)
-
-	actionRequest, _ := http.NewRequest("POST", url, bytes.NewReader(toBackend))
+	actionRequest, _ := http.NewRequest("GET", url, nil)
+	log.Println(url)
 	actionRequest.Header.Set("Content-Type", "application/json")
 	actionRequest.Header.Set("Connection", "keep-alive")
 
@@ -150,29 +256,29 @@ func doGet(url string, request apiRequest) (*RESPONSE_JSON, error) {
 	if err != nil {
 		return nil, err
 	}
-	// response validation
-	err = json.NewDecoder(actionResult.Body).Decode(&serviceResp)
+
+	if actionResult.StatusCode != 200 {
+		return nil, errors.New("Wrong response: " + actionResult.Status)
+	}
+
+	body, err := ioutil.ReadAll(actionResult.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if serviceResp.IsEmpty() {
-		return nil, errors.New("Empty response from backend")
-	}
-	return serviceResp, nil
+	return body, nil
 }
 
-func doPost(url string, request apiRequest) (*RESPONSE_JSON, error) {
-	serviceResp := new(RESPONSE_JSON)
+func (rt *Router) doPost(url string, request map[string]interface{}) ([]byte, error) {
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: time.Duration(helpers.Atoi(appConfig["netdialtimeout"])) * time.Second,
+			Timeout: time.Duration(10) * time.Second,
 		}).Dial,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	var netClient = &http.Client{
-		Timeout:   time.Second * time.Duration(helpers.Atoi(appConfig["netclienttimeout"])),
+		Timeout:   time.Second * time.Duration(10),
 		Transport: netTransport,
 	}
 
@@ -189,14 +295,15 @@ func doPost(url string, request apiRequest) (*RESPONSE_JSON, error) {
 	if err != nil {
 		return nil, err
 	}
-	// response validation
-	err = json.NewDecoder(actionResult.Body).Decode(&serviceResp)
+
+	if actionResult.StatusCode != 200 {
+		return nil, errors.New("Wrong response: " + actionResult.Status)
+	}
+
+	body, err := ioutil.ReadAll(actionResult.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	if serviceResp.IsEmpty() {
-		return nil, errors.New("Empty response from backend")
-	}
-	return serviceResp, nil
+	return body, nil
 }

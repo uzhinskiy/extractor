@@ -24,9 +24,9 @@ type Config struct {
 		Port string `yaml:"port"`
 	} `yaml:"app"`
 	Elastic struct {
-		Hosts []string `yaml:"hosts"`
-		SSL   bool     `yaml:"ssl"`
-		Cert  string   `yaml:"certfile"`
+		Host string `yaml:"host`
+		SSL  bool   `yaml:"ssl"`
+		Cert string `yaml:"certfile"`
 	} `yaml:"elastic"`
 }
 
@@ -46,8 +46,8 @@ func Parse(f string) Config {
 		c.App.Port = "9400"
 	}
 
-	if len(c.Elastic.Hosts) == 0 {
-		c.Elastic.Hosts[0] = "http://127.0.0.1:9200/"
+	if c.Elastic.Host == "" {
+		c.Elastic.Host = "http://127.0.0.1:9200/"
 	}
 
 	return c

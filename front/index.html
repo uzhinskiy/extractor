@@ -121,7 +121,7 @@ $(document).ready(function(){
     var post = {
       "action": "get_repositories"
     };
-    
+
     $.ajax({
       type: "POST",
       url: "/api/",
@@ -129,11 +129,10 @@ $(document).ready(function(){
       dataType: 'json',
       contentType: 'application/json',
       success: function (data) {
-        
+
         var str = "";
         for(var k in data) {
           var type = data[k].type;
-          
           switch (type) {
             case "fs": {
               basket = '<svg width="1.3em" height="1.3em" viewBox="0 0 16 16" class="bi bi-files" fill="currentColor" xmlns="http://www.w3.org/2000/svg"> <path fill-rule="evenodd" d="M4 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4z"/> <path d="M6 0h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2v-1a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1H4a2 2 0 0 1 2-2z"/></svg>';
@@ -148,8 +147,7 @@ $(document).ready(function(){
               break;
             }
           }
-        
-          str = "<li><h4 class='font-weight-bold'><a href='#' class='repos list-group-item list-group-item-action' data-id='" + data[k].name + "'>"+ basket + "&nbsp;" + data[k].name + "</a></h4></li>";
+          str = "<li><h4 class='font-weight-bold'><a href='#' class='repos list-group-item list-group-item-action' data-id='" + data[k].id + "'>"+ basket + "&nbsp;" + data[k].id + "</a></h4></li>";
           $('#repolist').append(str);
         }
       }  
@@ -162,7 +160,7 @@ function NodeStatus() {
     var post = {
       "action": "get_nodes"
     };
-    
+
     $.ajax({
       type: "POST",
       url: "/api/",
@@ -173,18 +171,18 @@ function NodeStatus() {
         var str = "";
         var pc = "";
         for(var k in data) {
-            if (data[k].diskusedp < 70) {
+            if (data[k].dup < 70) {
               pc = "bg-success"
             }
-            if (data[k].diskusedp > 70) {
+            if (data[k].dup > 70) {
               pc = "bg-warning"
             }
-            if (data[k].diskusedp > 85) {
+            if (data[k].dup > 85) {
               pc = "bg-danger"
             }
-            str += "<li><h4 class='small font-weight-bold'>" + data[k].name + " / " + data[k].ip + "<span class='float-right'>" + data[k].disktotal + "</span></h4>";
+            str += "<li><h4 class='small font-weight-bold'>" + data[k].name + " / " + data[k].ip + "<span class='float-right'>" + data[k].dt + "</span></h4>";
             str += "<div class='progress' style='height: 30px;'>";
-            str += "<div class='progress-bar " + pc + "' role='progressbar' style='width: " + data[k].diskusedp + "%;' aria-valuenow='" + data[k].diskusedp + "' aria-valuemin='0' aria-valuemax='100'>" + data[k].diskusedp + "</div>";
+            str += "<div class='progress-bar " + pc + "' role='progressbar' style='width: " + data[k].dup + "%;' aria-valuenow='" + data[k].dup + "' aria-valuemin='0' aria-valuemax='100'>" + data[k].dup + "</div>";
             str += "</div><br></li>";
             pc = "";
         }

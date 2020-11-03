@@ -1,6 +1,10 @@
 package main
 
 import (
+	"flag"
+	"log"
+	"os"
+
 	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/router"
 )
