@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/uzhinskiy/extractor/modules/front"
+	"github.com/uzhinskiy/lib.go/helpers"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 )
 
 type apiRequest struct {
-	Action string                 `json:"version,omitempty"` // Имя вызываемого метода*
+	Action string                 `json:"action,omitempty"` // Имя вызываемого метода*
 	Values map[string]interface{} `json:"values,omitempty"`
 }
 
@@ -51,7 +52,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	var request apiRequest
 
 	defer r.Body.Close()
-	remoteIP := getIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
+	remoteIP := helpers.GetIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
 
 	if r.Method == "OPTIONS" {
 		return
@@ -69,4 +70,55 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(request)
+
+	switch request.Action {
+	case "get_repositories":
+		{
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Server", version)
+			w.Write([]byte("{\"OK\"}"))
+		}
+	case "get_nodes":
+		{
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Server", version)
+			w.Write([]byte("{\"OK\"}"))
+		}
+
+	case "get_snapshots":
+		{
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Server", version)
+			w.Write([]byte("{\"OK\"}"))
+		}
+
+	case "get_snapshot":
+		{
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Server", version)
+			w.Write([]byte("{\"OK\"}"))
+		}
+
+	case "restore":
+		{
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Server", version)
+			w.Write([]byte("{\"OK\"}"))
+		}
+
+	default:
+		{
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+			log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", http.StatusServiceUnavailable, "\t", "Invalid request method ", "\t", r.UserAgent())
+			return
+
+		}
+
+	}
+
 }
