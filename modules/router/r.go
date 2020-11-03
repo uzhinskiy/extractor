@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/front"
 	"github.com/uzhinskiy/lib.go/helpers"
 )
@@ -16,19 +17,25 @@ var (
 	version = "extractor/0.0.1"
 )
 
+type Router struct {
+	conf config.Config
+}
+
 type apiRequest struct {
 	Action string                 `json:"action,omitempty"` // Имя вызываемого метода*
 	Values map[string]interface{} `json:"values,omitempty"`
 }
 
-func Run() {
-	http.HandleFunc("/", FrontHandler)
-	http.HandleFunc("/api/", ApiHandler)
+func Run(cnf config.Config) {
+	rt := Router{}
+	rt.conf = cnf
+	http.HandleFunc("/", rt.FrontHandler)
+	http.HandleFunc("/api/", rt.ApiHandler)
 	http.ListenAndServe(":9400", nil)
 }
 
 // web-ui
-func FrontHandler(w http.ResponseWriter, r *http.Request) {
+func (rt *Router) FrontHandler(w http.ResponseWriter, r *http.Request) {
 	file := r.URL.Path
 	if file == "/" {
 		file = "/index.html"
@@ -48,7 +55,7 @@ func FrontHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func ApiHandler(w http.ResponseWriter, r *http.Request) {
+func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	var request apiRequest
 
 	defer r.Body.Close()
