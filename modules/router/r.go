@@ -54,6 +54,13 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	remoteIP := helpers.GetIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
 
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Methods", "POST,OPTIONS")
+	w.Header().Add("Access-Control-Allow-Credentials", "true")
+	w.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Server", version)
+
 	if r.Method == "OPTIONS" {
 		return
 	}
@@ -69,45 +76,31 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 		return
 	}
-	log.Println(request)
+
+	log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 200, "\t", r.UserAgent())
 
 	switch request.Action {
 	case "get_repositories":
 		{
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Server", version)
 			w.Write([]byte("{\"OK\"}"))
 		}
 	case "get_nodes":
 		{
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Server", version)
 			w.Write([]byte("{\"OK\"}"))
 		}
 
 	case "get_snapshots":
 		{
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Server", version)
 			w.Write([]byte("{\"OK\"}"))
 		}
 
 	case "get_snapshot":
 		{
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Server", version)
 			w.Write([]byte("{\"OK\"}"))
 		}
 
 	case "restore":
 		{
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Server", version)
 			w.Write([]byte("{\"OK\"}"))
 		}
 
@@ -121,4 +114,82 @@ func ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+}
+
+func doGet(url string, request apiRequest) (*RESPONSE_JSON, error) {
+	serviceResp := new(RESPONSE_JSON)
+	var netTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: time.Duration(helpers.Atoi(appConfig["netdialtimeout"])) * time.Second,
+		}).Dial,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	var netClient = &http.Client{
+		Timeout:   time.Second * time.Duration(helpers.Atoi(appConfig["netclienttimeout"])),
+		Transport: netTransport,
+	}
+
+	toBackend, _ := json.Marshal(request)
+
+	actionRequest, _ := http.NewRequest("POST", url, bytes.NewReader(toBackend))
+	actionRequest.Header.Set("Content-Type", "application/json")
+	actionRequest.Header.Set("Connection", "keep-alive")
+
+	actionResult, err := netClient.Do(actionRequest)
+	if actionResult != nil {
+		defer actionResult.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	// response validation
+	err = json.NewDecoder(actionResult.Body).Decode(&serviceResp)
+	if err != nil {
+		return nil, err
+	}
+
+	if serviceResp.IsEmpty() {
+		return nil, errors.New("Empty response from backend")
+	}
+	return serviceResp, nil
+}
+
+func doPost(url string, request apiRequest) (*RESPONSE_JSON, error) {
+	serviceResp := new(RESPONSE_JSON)
+	var netTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: time.Duration(helpers.Atoi(appConfig["netdialtimeout"])) * time.Second,
+		}).Dial,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	var netClient = &http.Client{
+		Timeout:   time.Second * time.Duration(helpers.Atoi(appConfig["netclienttimeout"])),
+		Transport: netTransport,
+	}
+
+	toBackend, _ := json.Marshal(request)
+
+	actionRequest, _ := http.NewRequest("POST", url, bytes.NewReader(toBackend))
+	actionRequest.Header.Set("Content-Type", "application/json")
+	actionRequest.Header.Set("Connection", "keep-alive")
+
+	actionResult, err := netClient.Do(actionRequest)
+	if actionResult != nil {
+		defer actionResult.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	// response validation
+	err = json.NewDecoder(actionResult.Body).Decode(&serviceResp)
+	if err != nil {
+		return nil, err
+	}
+
+	if serviceResp.IsEmpty() {
+		return nil, errors.New("Empty response from backend")
+	}
+	return serviceResp, nil
 }
