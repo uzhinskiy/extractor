@@ -224,13 +224,13 @@ func (rt *Router) doGet(url string) ([]byte, error) {
 
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: time.Duration(10) * time.Second,
+			Timeout: time.Duration(60) * time.Second,
 		}).Dial,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	var netClient = &http.Client{
-		Timeout:   time.Second * time.Duration(10),
+		Timeout:   time.Second * time.Duration(60),
 		Transport: netTransport,
 	}
 
