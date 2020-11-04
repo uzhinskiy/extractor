@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	version = "extractor/0.0.3"
+	version = "extractor/0.0.4"
 )
 
 type Router struct {
@@ -262,13 +262,13 @@ func (rt *Router) doGet(url string) ([]byte, error) {
 func (rt *Router) doPost(url string, request map[string]interface{}) ([]byte, error) {
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: time.Duration(10) * time.Second,
+			Timeout: time.Duration(60) * time.Second,
 		}).Dial,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	var netClient = &http.Client{
-		Timeout:   time.Second * time.Duration(10),
+		Timeout:   time.Second * time.Duration(60),
 		Transport: netTransport,
 	}
 
