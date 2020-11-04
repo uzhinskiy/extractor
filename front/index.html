@@ -34,6 +34,12 @@ body {
           <small id="selectedsnap"></small>
         </h1>
         <ul class="list-unstyled mb-0" id="snapshotlist"> </ul>
+
+<div class="d-flex align-items-center invisible" id="loading">
+  <strong>Loading...</strong>
+  <div class="spinner-border ml-auto" role="status" aria-hidden="true"></div>
+</div>
+
       </div> 
 
       <!-- Sidebar Widgets Column -->
@@ -107,6 +113,7 @@ body {
   </div>
 
 </div><!-- /.modal -->
+
 
 </body>
 
@@ -194,15 +201,18 @@ function NodeStatus() {
 
 $('#repolist').on('click', 'a.repos', function(e) {
     var reponame = e.target.dataset.id;
+
+    $("#loading").removeClass('invisible');
+
     $('#selectedsnap').html("from <strong>"+reponame+"</strong>");
-    
+
     var post = {
       "action": "get_snapshots",
       "values" : {
         "repo": reponame
       }
     };
-    
+
     $.ajax({
       type: "POST",
       url: "/api/",
@@ -211,9 +221,9 @@ $('#repolist').on('click', 'a.repos', function(e) {
       contentType: 'application/json',
       success: function (data) {
         var str = "";
-        
+
         dlicon = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-download" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>';
-        
+
         for(var k in data) {
           snapshot = data[k].id;
           uniqid = data[k].start_epoch;
@@ -229,6 +239,8 @@ $('#repolist').on('click', 'a.repos', function(e) {
 
           str += "<li><h4 class='font-weight-bold  list-group-item list-group-item-action' title='"+status+"'>"+icon+" <strong>" + snapshot + "</strong> created at " + hdate + "<a href='#' class='float-right btn' title='X-tract it' data-target='#update_instance' data-toggle='modal' data-repo='" + reponame + "' data-id='" + data[k].id + "'>"+dlicon+"</a></h4></li>";
         }
+
+        $("#loading").addClass('invisible');
         $('#snapshotlist').html(str);
     }
   });

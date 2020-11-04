@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"net"
 
-	//	"reflect"
 	"time"
 
 	"github.com/uzhinskiy/extractor/modules/config"
@@ -24,7 +23,7 @@ import (
 )
 
 var (
-	version = "extractor/0.0.4"
+	version = "extractor/0.0.5"
 )
 
 type Router struct {
