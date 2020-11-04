@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	version = "extractor/0.0.2"
+	version = "extractor/0.0.3"
 )
 
 type Router struct {
