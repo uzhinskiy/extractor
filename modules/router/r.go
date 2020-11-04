@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	version = "extractor/0.0.1"
+	version = "extractor/0.0.2"
 )
 
 type Router struct {
@@ -163,12 +163,6 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "restore":
 		{
-			/*
-				"values":{"repo":"my_backup","snapshot":"boris-2020.11.03",
-				"pattern":"(.+)",
-				"replacement":"restored_$1",
-				"indices":["boris"]
-			*/
 
 			var repo string
 			var snap string
@@ -202,20 +196,16 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				"include_aliases":      false,
 				"rename_pattern":       pattern,
 				"rename_replacement":   replacement,
+				"indices":              request.Values["indices"],
 			}
-			//indices: "mp-2020.11.01",
 
-			log.Println(request.Values["indices"].([]string))
-
-			/*
-				response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+repo+"/"+snap+"/_restore?wait_for_completion=false", data)
-				if err != nil {
-					http.Error(w, err.Error(), 500)
-					log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
-					return
-				}
-				w.Write(response)
-			*/
+			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+repo+"/"+snap+"/_restore?wait_for_completion=false", req)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			w.Write(response)
 		}
 
 	default:
