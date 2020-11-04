@@ -103,7 +103,7 @@ POST /_snapshot/my_repository/snapshot_2/_restore?wait_for_completion=false
 }
 
 
-curl -ks "https://opendistro:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wait_for_completion=false" -H "Content-type: application/json" -d'
+curl  "http://localhost:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wait_for_completion=false" -H "Content-type: application/json" -d'
 {
   "indices": "mp-2020.11.01",
   "ignore_unavailable": true,

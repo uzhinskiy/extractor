@@ -107,7 +107,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 200, "\t", r.UserAgent())
+	log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 200, "\t", r.UserAgent())
 
 	switch request.Action {
 	case "get_repositories":
@@ -115,7 +115,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/repositories?format=json")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			w.Write(response)
@@ -125,7 +125,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&h=ip,name,dt,du,dup,d")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			w.Write(response)
@@ -136,13 +136,13 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			var repo string
 			if repo, ok = request.Values["repo"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/snapshots/" + repo + "?format=json")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			w.Write(response)
@@ -154,20 +154,20 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			var snap string
 			if repo, ok = request.Values["repo"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
 			if snap, ok = request.Values["snapshot"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
 			response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + repo + "/" + snap)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			w.Write(response)
@@ -182,23 +182,23 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			var replacement string
 			if repo, ok = request.Values["repo"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
 			if snap, ok = request.Values["snapshot"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			if pattern, ok = request.Values["pattern"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			if replacement, ok = request.Values["replacement"].(string); !ok {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
@@ -214,7 +214,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+repo+"/"+snap+"/_restore?wait_for_completion=false", req)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 			w.Write(response)
@@ -247,7 +247,6 @@ func (rt *Router) doGet(url string) ([]byte, error) {
 	}
 
 	actionRequest, _ := http.NewRequest("GET", url, nil)
-	log.Println(url)
 	actionRequest.Header.Set("Content-Type", "application/json")
 	actionRequest.Header.Set("Connection", "keep-alive")
 
