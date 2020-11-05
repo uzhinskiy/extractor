@@ -15,20 +15,13 @@ package router
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"mime"
 	"net/http"
 	"path"
 	"strings"
-
-	"crypto/tls"
-	"errors"
-	"io/ioutil"
-
-	"bytes"
-	"net"
-
-	"time"
+	"sync"
 
 	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/front"
@@ -37,8 +30,9 @@ import (
 )
 
 type Router struct {
-	conf config.Config
-	nc   *http.Client
+	conf  config.Config
+	nc    *http.Client
+	nodes nodesStatus
 }
 
 type apiRequest struct {
@@ -61,36 +55,32 @@ type snapStatus struct {
 }
 
 type singleNode struct {
-	Ip              string `json:"ip,omitempty"`
-	Name            string `json:"name,omitempty"`
-	DiskTotal       int32  `json:"dt,omitempty"`
-	DiskUsed        int32  `json:"du,omitempty"`
-	DiskUsedPercent int    `json:"dup,omitempty"`
-	DiskFree        int32  `json:"d,omitempty"`
+	Ip       string `json:"ip,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Dt       string `json:"dt,omitempty"`
+	Du       string `json:"du,omitempty"`
+	Dup      string `json:"dup,omitempty"`
+	D        string `json:"d,omitempty"`
+	DiskFree int
+}
+
+type nodesStatus struct {
+	sync.RWMutex
+	nlist []singleNode
 }
 
 func Run(cnf config.Config) {
 	rt := Router{}
 	rt.conf = cnf
 	rt.netClientPrepare()
+	_, err := rt.getNodes()
+	if err != nil {
+		log.Println(err)
+	}
 
 	http.HandleFunc("/", rt.FrontHandler)
 	http.HandleFunc("/api/", rt.ApiHandler)
 	http.ListenAndServe(":"+cnf.App.Port, nil)
-}
-
-func (rt *Router) netClientPrepare() {
-	var netTransport = &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout: time.Duration(rt.conf.App.TimeOut) * time.Second,
-		}).Dial,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	rt.nc = &http.Client{
-		Timeout:   time.Second * time.Duration(rt.conf.App.TimeOut),
-		Transport: netTransport,
-	}
 }
 
 // web-ui
@@ -118,6 +108,9 @@ func (rt *Router) FrontHandler(w http.ResponseWriter, r *http.Request) {
 func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	var request apiRequest
 	var ok bool
+
+	rt.nodes.RLock()
+	defer rt.nodes.RUnlock()
 
 	defer r.Body.Close()
 	remoteIP := helpers.GetIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
@@ -160,13 +153,17 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "get_nodes":
 		{
-			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&bytes=b&h=ip,name,dt,du,dup,d")
+
+			nresp, err := rt.getNodes()
+
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
-			w.Write(response)
+
+			j, _ := json.Marshal(nresp)
+			w.Write(j)
 		}
 
 	case "get_indices":
@@ -177,6 +174,8 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
+
+			log.Println(rt.nodes.nlist)
 			w.Write(response)
 		}
 
@@ -281,55 +280,30 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (rt *Router) doGet(url string) ([]byte, error) {
+func (rt *Router) getNodes() ([]singleNode, error) {
 
-	actionRequest, _ := http.NewRequest("GET", url, nil)
-	actionRequest.Header.Set("Content-Type", "application/json")
-	actionRequest.Header.Set("Connection", "keep-alive")
+	var nresp []singleNode
 
-	actionResult, err := rt.nc.Do(actionRequest)
-	if actionResult != nil {
-		defer actionResult.Body.Close()
-	}
+	response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&bytes=b&h=ip,name,dt,du,dup,d")
 	if err != nil {
 		return nil, err
 	}
 
-	if actionResult.StatusCode != 200 {
-		return nil, errors.New("Wrong response: " + actionResult.Status)
-	}
-
-	body, err := ioutil.ReadAll(actionResult.Body)
+	err = json.Unmarshal(response, &rt.nodes.nlist)
 	if err != nil {
 		return nil, err
 	}
 
-	return body, nil
-}
-
-func (rt *Router) doPost(url string, request map[string]interface{}) ([]byte, error) {
-	toBackend, _ := json.Marshal(request)
-
-	actionRequest, _ := http.NewRequest("POST", url, bytes.NewReader(toBackend))
-	actionRequest.Header.Set("Content-Type", "application/json")
-	actionRequest.Header.Set("Connection", "keep-alive")
-
-	actionResult, err := rt.nc.Do(actionRequest)
-	if actionResult != nil {
-		defer actionResult.Body.Close()
-	}
-	if err != nil {
-		return nil, err
+	for i, n := range rt.nodes.nlist {
+		rt.nodes.nlist[i].DiskFree = helpers.Atoi(n.D)
+		nresp = append(nresp, singleNode{
+			Ip:   rt.nodes.nlist[i].Ip,
+			Name: rt.nodes.nlist[i].Name,
+			Dt:   fmt.Sprintf("%dGb", helpers.Atoi(n.Dt)/(1024*1024*1024)),
+			Dup:  rt.nodes.nlist[i].Dup,
+		})
 	}
 
-	if actionResult.StatusCode != 200 {
-		return nil, errors.New("Wrong response: " + actionResult.Status)
-	}
+	return nresp, nil
 
-	body, err := ioutil.ReadAll(actionResult.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
 }

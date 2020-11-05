@@ -7,6 +7,7 @@ replace github.com/uzhinskiy/extractor/modules/front => ./modules/front
 replace github.com/uzhinskiy/extractor/modules/router => ./modules/router
 
 replace github.com/uzhinskiy/extractor/modules/config => ./modules/config
+
 replace github.com/uzhinskiy/extractor/modules/version => ./modules/version
 
 require (
@@ -14,6 +15,6 @@ require (
 	github.com/uzhinskiy/extractor/modules/front v0.0.0 // indirect
 	github.com/uzhinskiy/extractor/modules/router v0.0.0
 	github.com/uzhinskiy/extractor/modules/version v0.0.0
-	github.com/uzhinskiy/lib.go v0.0.0-20201103093805-d91c0db6a10b // indirect
+	github.com/uzhinskiy/lib.go v0.0.0-20201105230241-fbfc193ce780 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
