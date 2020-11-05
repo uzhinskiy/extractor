@@ -21,7 +21,8 @@ import (
 
 type Config struct {
 	App struct {
-		Port string `yaml:"port"`
+		Port    string `yaml:"port"`
+		TimeOut int    `yaml:"timeout"`
 	} `yaml:"app"`
 	Elastic struct {
 		Host string `yaml:"host`
@@ -44,6 +45,10 @@ func Parse(f string) Config {
 
 	if c.App.Port == "" {
 		c.App.Port = "9400"
+	}
+
+	if c.App.TimeOut == 0 {
+		c.App.TimeOut = 30
 	}
 
 	if c.Elastic.Host == "" {

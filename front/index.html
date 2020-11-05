@@ -28,23 +28,10 @@ body {
   <div class="container-fluid">
     <div class="row">
       <!-- Blog Entries Column -->
-      <div class="col-md-9">
 
-        <h1 class="my-4">Snapshots list
-          <small id="selectedsnap"></small>
-        </h1>
-        <ul class="list-unstyled mb-0" id="snapshotlist"> </ul>
-
-<div class="d-flex align-items-center invisible" id="loading">
-  <strong>Loading...</strong>
-  <div class="spinner-border ml-auto" role="status" aria-hidden="true"></div>
-</div>
-
-      </div> 
 
       <!-- Sidebar Widgets Column -->
-      <div class="col-md-3">
-
+      <div class="col-md-2">
         <!-- Side Widget -->
         <div class="card my-4">
           <h5 class="card-header">Repositories</h5>
@@ -66,13 +53,30 @@ body {
             <ul class="list-unstyled mb-0" id="nodelist"> </ul>
           </div>
         </div>
-
-
       </div>
 
+      <div class="col-md-7">
+
+        <h1 class="my-4">Snapshots list
+          <small id="selectedsnap"></small>
+        </h1>
+        
+        <div class="d-flex align-items-center invisible" id="loading"><strong>Loading...</strong><div class="spinner-border ml-auto" role="status" aria-hidden="true"></div></div>
+        <ul class="list-unstyled mb-0" id="snapshotlist"> </ul>
+
+      </div>       
+      
+      <!-- Sidebar Widgets Column -->
+      <div class="col-md-3">
+        <!-- Side Widget -->
+        <div class="card my-4">
+          <h5 class="card-header">Indices</h5>
+          <div class="card-body">
+            <ul class="list-unstyled list-group mb-0" id="indlist"> </ul>
+          </div>
+        </div>
     </div>
     <!-- /.row -->
-
   </div>
   <!-- /.container -->
 
@@ -95,14 +99,6 @@ body {
             <select multiple class="form-control" name="indices[]" id="indices">
             </select>
           </div>
-          <div class="form-group">
-            <label for="pattern" class="col-form-label">rename pattern:</label>
-            <input type="text" class="form-control" id="pattern" name="pattern" value="(.+)">
-          </div>
-          <div class="form-group">
-            <label for="replacement" class="col-form-label">rename replacement:</label>
-            <input type="text" class="form-control" id="replacement" name="replacement" value="restored_$1">
-          </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -122,7 +118,90 @@ body {
 
 <script>
 
-var myVar = setInterval(NodeStatus, 5000);
+var getnodes = setInterval(NodeStatus, 5000);
+var getindices = setInterval(IndexList, 5000);
+
+function IndexList() {
+    var post = {
+      "action": "get_indices"
+    };
+    
+    $.ajax({
+      type: "POST",
+      url: "/api/",
+      data: JSON.stringify(post),
+      dataType: 'json',
+      contentType: 'application/json',
+      success: function (data) {
+        var str = "";
+        var health = "text-success";
+        for(var k in data) {
+          switch (data[k].health) {
+            case "green": {
+              health = "text-success";
+              break;
+            }
+            case "yellow": {
+              health = "text-warning";
+              break;
+            }
+            case "red": {
+              health = "text-danger";
+              break;
+            }
+          }
+          switch (data[k].status) {
+            case "close": {
+              basket = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-folder '+health+'" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M9.828 4a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.173 2H2.5a1 1 0 0 0-1 .981L1.546 4h-1L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3v1z"/><path fill-rule="evenodd" d="M13.81 4H2.19a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4zM2.19 3A2 2 0 0 0 .198 5.181l.637 7A2 2 0 0 0 2.826 14h10.348a2 2 0 0 0 1.991-1.819l.637-7A2 2 0 0 0 13.81 3H2.19z"/></svg>';
+              break;
+            }
+            case "open": {
+              basket = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-folder2-open '+health+'" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z"/></svg>';
+              break;
+            }
+          }
+          str += "<li><h5 class='font-weight-bold'>"+ basket + "&nbsp;" + data[k].index + "<span class='float-right'>" + data[k]["store.size"] + "</span></h5></li>";
+        }
+        $('#indlist').html(str);
+      }
+    });
+}
+
+function NodeStatus() {
+    var post = {
+      "action": "get_nodes"
+    };
+
+    $.ajax({
+      type: "POST",
+      url: "/api/",
+      data: JSON.stringify(post),
+      dataType: 'json',
+      contentType: 'application/json',
+      success: function (data) {
+        var str = "";
+        var pc = "";
+        for(var k in data) {
+            if (data[k].dup < 70) {
+              pc = "bg-success"
+            }
+            if (data[k].dup > 70) {
+              pc = "bg-warning"
+            }
+            if (data[k].dup > 85) {
+              pc = "bg-danger"
+            }
+            str += "<li><h4 class='small font-weight-bold'>" + data[k].name + " / " + data[k].ip + "<span class='float-right'>" + data[k].dt + "</span></h4>";
+            str += "<div class='progress' style='height: 30px;'>";
+            str += "<div class='progress-bar " + pc + "' role='progressbar' style='width: " + data[k].dup + "%;' aria-valuenow='" + data[k].dup + "' aria-valuemin='0' aria-valuemax='100'>" + data[k].dup + "%</div>";
+            str += "</div><br></li>";
+            pc = "";
+        }
+        $('#nodelist').html(str);
+      }
+    });
+}
+
 
 $(document).ready(function(){
     var post = {
@@ -161,43 +240,8 @@ $(document).ready(function(){
     });
 
     NodeStatus();
+    IndexList();
 });
-
-function NodeStatus() {
-    var post = {
-      "action": "get_nodes"
-    };
-
-    $.ajax({
-      type: "POST",
-      url: "/api/",
-      data: JSON.stringify(post),
-      dataType: 'json',
-      contentType: 'application/json',
-      success: function (data) {
-        var str = "";
-        var pc = "";
-        for(var k in data) {
-            if (data[k].dup < 70) {
-              pc = "bg-success"
-            }
-            if (data[k].dup > 70) {
-              pc = "bg-warning"
-            }
-            if (data[k].dup > 85) {
-              pc = "bg-danger"
-            }
-            str += "<li><h4 class='small font-weight-bold'>" + data[k].name + " / " + data[k].ip + "<span class='float-right'>" + data[k].dt + "</span></h4>";
-            str += "<div class='progress' style='height: 30px;'>";
-            str += "<div class='progress-bar " + pc + "' role='progressbar' style='width: " + data[k].dup + "%;' aria-valuenow='" + data[k].dup + "' aria-valuemin='0' aria-valuemax='100'>" + data[k].dup + "</div>";
-            str += "</div><br></li>";
-            pc = "";
-        }
-        $('#nodelist').html(str);
-      }
-    });
-}
-
 
 $('#repolist').on('click', 'a.repos', function(e) {
     var reponame = e.target.dataset.id;
@@ -230,14 +274,17 @@ $('#repolist').on('click', 'a.repos', function(e) {
           status = data[k].status;
           date = new Date(data[k].start_epoch * 1000);
           hdate = date.toLocaleString("ru-RU", {timeZoneName: "short"});
+          restore_button = "";
 
           if (status == "SUCCESS") {
             icon = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-server text-success" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M1.333 2.667C1.333 1.194 4.318 0 8 0s6.667 1.194 6.667 2.667V4C14.665 5.474 11.68 6.667 8 6.667 4.318 6.667 1.333 5.473 1.333 4V2.667zm0 3.667v3C1.333 10.805 4.318 12 8 12c3.68 0 6.665-1.193 6.667-2.665V6.334c-.43.32-.931.58-1.458.79C11.81 7.684 9.967 8 8 8c-1.967 0-3.81-.317-5.21-.876a6.508 6.508 0 0 1-1.457-.79zm13.334 5.334c-.43.319-.931.578-1.458.789-1.4.56-3.242.876-5.209.876-1.967 0-3.81-.316-5.21-.876a6.51 6.51 0 0 1-1.457-.79v1.666C1.333 14.806 4.318 16 8 16s6.667-1.194 6.667-2.667v-1.665z"/></svg>';
+            restore_button = "<a href='#' class='float-right btn' title='X-tract it' data-target='#update_instance' data-toggle='modal' data-repo='" + reponame + "' data-id='" + data[k].id + "'>"+dlicon+"</a>";
           } else {
             icon = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-server text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M1.333 2.667C1.333 1.194 4.318 0 8 0s6.667 1.194 6.667 2.667V4C14.665 5.474 11.68 6.667 8 6.667 4.318 6.667 1.333 5.473 1.333 4V2.667zm0 3.667v3C1.333 10.805 4.318 12 8 12c3.68 0 6.665-1.193 6.667-2.665V6.334c-.43.32-.931.58-1.458.79C11.81 7.684 9.967 8 8 8c-1.967 0-3.81-.317-5.21-.876a6.508 6.508 0 0 1-1.457-.79zm13.334 5.334c-.43.319-.931.578-1.458.789-1.4.56-3.242.876-5.209.876-1.967 0-3.81-.316-5.21-.876a6.51 6.51 0 0 1-1.457-.79v1.666C1.333 14.806 4.318 16 8 16s6.667-1.194 6.667-2.667v-1.665z"/></svg>';
+            restore_button = "";
           }
 
-          str += "<li><h4 class='font-weight-bold  list-group-item list-group-item-action' title='"+status+"'>"+icon+" <strong>" + snapshot + "</strong> created at " + hdate + "<a href='#' class='float-right btn' title='X-tract it' data-target='#update_instance' data-toggle='modal' data-repo='" + reponame + "' data-id='" + data[k].id + "'>"+dlicon+"</a></h4></li>";
+          str += "<li><h4 class='font-weight-bold  list-group-item list-group-item-action' title='"+status+"'>"+icon+" <strong>" + snapshot + "</strong> created at " + hdate + restore_button +"</h4></li>";
         }
 
         $("#loading").addClass('invisible');
@@ -289,8 +336,6 @@ $("#restore").click(function(){
       "values" : {
         "repo": $('#r_repo').val(),
         "snapshot": $('#r_snapshot').val(),
-        "pattern": $('#pattern').val(),
-        "replacement": $('#replacement').val(),
         "indices": $('#indices').val()
       }
     };
