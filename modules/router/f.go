@@ -1,0 +1,95 @@
+// Copyright © 2020 Uzhinskiy Boris
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package router
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"crypto/tls"
+	"errors"
+	"io/ioutil"
+
+	"bytes"
+	"net"
+
+	"time"
+)
+
+func (rt *Router) netClientPrepare() {
+	var netTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout: time.Duration(rt.conf.App.TimeOut) * time.Second,
+		}).Dial,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	rt.nc = &http.Client{
+		Timeout:   time.Second * time.Duration(rt.conf.App.TimeOut),
+		Transport: netTransport,
+	}
+}
+
+func (rt *Router) doGet(url string) ([]byte, error) {
+
+	actionRequest, _ := http.NewRequest("GET", url, nil)
+	actionRequest.Header.Set("Content-Type", "application/json")
+	actionRequest.Header.Set("Connection", "keep-alive")
+
+	actionResult, err := rt.nc.Do(actionRequest)
+	if actionResult != nil {
+		defer actionResult.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if actionResult.StatusCode != 200 {
+		return nil, errors.New("Wrong response: " + actionResult.Status)
+	}
+
+	body, err := ioutil.ReadAll(actionResult.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func (rt *Router) doPost(url string, request map[string]interface{}) ([]byte, error) {
+	toBackend, _ := json.Marshal(request)
+
+	actionRequest, _ := http.NewRequest("POST", url, bytes.NewReader(toBackend))
+	actionRequest.Header.Set("Content-Type", "application/json")
+	actionRequest.Header.Set("Connection", "keep-alive")
+
+	actionResult, err := rt.nc.Do(actionRequest)
+	if actionResult != nil {
+		defer actionResult.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if actionResult.StatusCode != 200 {
+		return nil, errors.New("Wrong response: " + actionResult.Status)
+	}
+
+	body, err := ioutil.ReadAll(actionResult.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
