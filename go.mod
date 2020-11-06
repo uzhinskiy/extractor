@@ -3,11 +3,8 @@ module github.com/uzhinskiy/extractor
 go 1.14
 
 replace github.com/uzhinskiy/extractor/modules/front => ./modules/front
-
 replace github.com/uzhinskiy/extractor/modules/router => ./modules/router
-
 replace github.com/uzhinskiy/extractor/modules/config => ./modules/config
-
 replace github.com/uzhinskiy/extractor/modules/version => ./modules/version
 
 require (
