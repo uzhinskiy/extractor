@@ -21,7 +21,8 @@ import (
 	"net/http"
 	"path"
 	"strings"
-	"sync"
+
+	//	"sync"
 
 	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/front"
@@ -32,12 +33,16 @@ import (
 type Router struct {
 	conf  config.Config
 	nc    *http.Client
-	nodes nodesStatus
+	nodes nodesArray
 }
 
 type apiRequest struct {
-	Action string                 `json:"action,omitempty"` // Имя вызываемого метода*
-	Values map[string]interface{} `json:"values,omitempty"`
+	Action string `json:"action,omitempty"` // Имя вызываемого метода*
+	Values struct {
+		Indices  []string `json:"indices,omitempty"`
+		Repo     string   `json:"repo,omitempty"`
+		Snapshot string   `json:"snapshot,omitempty"`
+	} `json:"values,omitempty"`
 }
 
 type snapStatus struct {
@@ -47,9 +52,16 @@ type snapStatus struct {
 		Indices  map[string]struct {
 			Stats struct {
 				Total struct {
-					Size int32 `json:"size_in_bytes,omitempty"`
+					Size int `json:"size_in_bytes,omitempty"`
 				} `json:"total,omitempty"`
 			} `json:"stats,omitempty"`
+			Shards map[string]struct {
+				Stats struct {
+					Total struct {
+						Size int `json:"size_in_bytes,omitempty"`
+					} `json:"total,omitempty"`
+				} `json:"stats,omitempty"`
+			} `json:"shards,omitempty"`
 		} `json:"indices,omitempty"`
 	} `json:"snapshots,omitempty"`
 }
@@ -58,6 +70,7 @@ type singleNode struct {
 	Ip       string `json:"ip,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Dt       string `json:"dt,omitempty"`
+	Dtb      int
 	Du       string `json:"du,omitempty"`
 	Dup      string `json:"dup,omitempty"`
 	D        string `json:"d,omitempty"`
@@ -65,8 +78,14 @@ type singleNode struct {
 }
 
 type nodesStatus struct {
-	sync.RWMutex
 	nlist []singleNode
+}
+
+type nodesArray struct {
+	//sync.RWMutex
+	list []int
+	max  int
+	sum  int
 }
 
 func Run(cnf config.Config) {
@@ -107,10 +126,6 @@ func (rt *Router) FrontHandler(w http.ResponseWriter, r *http.Request) {
 
 func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	var request apiRequest
-	var ok bool
-
-	rt.nodes.RLock()
-	defer rt.nodes.RUnlock()
 
 	defer r.Body.Close()
 	remoteIP := helpers.GetIP(r.RemoteAddr, r.Header.Get("X-Real-IP"), r.Header.Get("X-Forwarded-For"))
@@ -175,19 +190,17 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			log.Println(rt.nodes.nlist)
 			w.Write(response)
 		}
 
 	case "get_snapshots":
 		{
-			var repo string
-			if repo, ok = request.Values["repo"].(string); !ok {
+			if request.Values.Repo == "" {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
-			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/snapshots/" + repo + "?format=json")
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/snapshots/" + request.Values.Repo + "?format=json")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
@@ -198,21 +211,20 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "get_snapshot":
 		{
-			var repo string
-			var snap string
-			if repo, ok = request.Values["repo"].(string); !ok {
+
+			if request.Values.Repo == "" {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
-			if snap, ok = request.Values["snapshot"].(string); !ok {
+			if request.Values.Snapshot == "" {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
-			response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + repo + "/" + snap)
+			response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + request.Values.Repo + "/" + request.Values.Snapshot)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
@@ -224,30 +236,32 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	case "restore":
 		{
 
-			var repo string
-			var snap string
-
-			if repo, ok = request.Values["repo"].(string); !ok {
+			if request.Values.Repo == "" {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
-			if snap, ok = request.Values["snapshot"].(string); !ok {
+			if request.Values.Snapshot == "" {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
 
-			status_response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + repo + "/" + snap + "/_status")
+			status_response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + request.Values.Repo + "/" + request.Values.Snapshot + "/_status")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
-			var status snapStatus // map[string]interface{}
-			_ = json.Unmarshal(status_response, &status)
-			log.Printf("%v", status)
+			var snap_status snapStatus
+			_ = json.Unmarshal(status_response, &snap_status)
+
+			for _, iname := range request.Values.Indices {
+				ind := snap_status.Snapshots[0].Indices[iname]
+
+				log.Println(ind.Stats.Total.Size)
+			}
 
 			req := map[string]interface{}{
 				"ignore_unavailable":   false,
@@ -255,11 +269,13 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				"include_aliases":      false,
 				"rename_pattern":       "(.+)",
 				"rename_replacement":   "restored_$1",
-				"indices":              request.Values["indices"],
+				"indices":              request.Values.Indices,
 				"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
 			}
 
-			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+repo+"/"+snap+"/_restore?wait_for_completion=false", req)
+			log.Println(rt.nodes)
+
+			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
@@ -277,33 +293,34 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-
 }
 
 func (rt *Router) getNodes() ([]singleNode, error) {
 
 	var nresp []singleNode
+	var na nodesArray
+
+	//	rt.nodes.RLock()
+	//	defer rt.nodes.RUnlock()
 
 	response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&bytes=b&h=ip,name,dt,du,dup,d")
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(response, &rt.nodes.nlist)
+	err = json.Unmarshal(response, &nresp)
 	if err != nil {
 		return nil, err
 	}
-
-	for i, n := range rt.nodes.nlist {
-		rt.nodes.nlist[i].DiskFree = helpers.Atoi(n.D)
-		nresp = append(nresp, singleNode{
-			Ip:   rt.nodes.nlist[i].Ip,
-			Name: rt.nodes.nlist[i].Name,
-			Dt:   fmt.Sprintf("%dGb", helpers.Atoi(n.Dt)/(1024*1024*1024)),
-			Dup:  rt.nodes.nlist[i].Dup,
-		})
+	s := 0
+	for i, n := range nresp {
+		nresp[i].Dt = fmt.Sprintf("%dGb", helpers.Atoi(n.Dt)/(1024*1024*1024))
+		na.list = append(na.list, helpers.Atoi(n.D))
+		s += helpers.Atoi(n.D)
 	}
-
+	na.sum = s
+	na.max = helpers.GetMaxValueInArray(na.list)
+	rt.nodes = na
 	return nresp, nil
 
 }
