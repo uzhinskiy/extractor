@@ -347,8 +347,11 @@ $("#restore").click(function(){
       dataType: 'json',
       contentType: 'application/json',
       success: function (data) {
-        console.log(data);
         $("#result").html('<div class="alert alert-success alert-dismissible fade show">Index restored.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+      },
+      error: function (data) {
+        console.log("error",data.responseJSON)
+        $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.responseJSON.error+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
       }
     });
   event.preventDefault();

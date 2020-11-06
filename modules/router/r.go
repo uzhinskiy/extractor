@@ -50,6 +50,9 @@ type snapStatus struct {
 		Snapshot string `json:"snapshot,omitempty"`
 		State    string `json:"state,omitempty"`
 		Indices  map[string]struct {
+			ShardsStats struct {
+				Total int `json:"total,omitempty"`
+			} `json:"shards_stats,omitempty"`
 			Stats struct {
 				Total struct {
 					Size int `json:"size_in_bytes,omitempty"`
@@ -260,28 +263,55 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			for _, iname := range request.Values.Indices {
 				ind := snap_status.Snapshots[0].Indices[iname]
 
-				log.Println(ind.Stats.Total.Size)
-			}
+				if ind.ShardsStats.Total == 1 {
+					if ind.Stats.Total.Size < rt.nodes.max {
 
-			req := map[string]interface{}{
-				"ignore_unavailable":   false,
-				"include_global_state": false,
-				"include_aliases":      false,
-				"rename_pattern":       "(.+)",
-				"rename_replacement":   "restored_$1",
-				"indices":              request.Values.Indices,
-				"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
-			}
+						req := map[string]interface{}{
+							"ignore_unavailable":   false,
+							"include_global_state": false,
+							"include_aliases":      false,
+							"rename_pattern":       "(.+)",
+							"rename_replacement":   "restored_$1",
+							"indices":              request.Values.Indices,
+							"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
+						}
 
-			log.Println(rt.nodes)
+						response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
+						if err != nil {
+							http.Error(w, err.Error(), 500)
+							log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+							return
+						}
+						w.Write(response)
 
-			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
-				return
-			}
-			w.Write(response)
+					} else {
+						msg := fmt.Sprintf("{\"error\":\"Restore index '%s' failed with: Not enough space\"}", iname)
+						http.Error(w, msg, 600)
+						log.Println(request.Action, "\t", 600, "\t", "Restore index '", iname, "' failed with: not enough space")
+						return
+					}
+				} else { // индексы с snapshots >1 - пока восстанавливаем без проверок
+					req := map[string]interface{}{
+						"ignore_unavailable":   false,
+						"include_global_state": false,
+						"include_aliases":      false,
+						"rename_pattern":       "(.+)",
+						"rename_replacement":   "restored_$1",
+						"indices":              request.Values.Indices,
+						"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
+					}
+
+					response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
+					if err != nil {
+						http.Error(w, err.Error(), 500)
+						log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+						return
+					}
+					w.Write(response)
+				}
+
+			} // end for
+
 		}
 
 	default:
