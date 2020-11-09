@@ -62,7 +62,7 @@ body {
         </h1>
         
         <div class="d-flex align-items-center invisible" id="loading"><strong>Loading...</strong><div class="spinner-border ml-auto" role="status" aria-hidden="true"></div></div>
-        <ul class="list-unstyled mb-0" id="snapshotlist"> </ul>
+        <ul class="list-unstyled mb-0 overflow-auto" style="max-height: 800px;" id="snapshotlist"> </ul>
 
       </div>       
       
@@ -347,14 +347,17 @@ $("#restore").click(function(){
       dataType: 'json',
       contentType: 'application/json',
       success: function (data) {
-        $("#result").html('<div class="alert alert-success alert-dismissible fade show">Index restored.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        if ( data.error == 0 ) {
+          $("#result").html('<div class="alert alert-success alert-dismissible fade show">'+data.message+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+        } else {
+          $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.message+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
+        }
       },
       error: function (data) {
-        console.log("error",data.responseJSON)
-        $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.responseJSON.error+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
+        $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.responseJSON.message+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
       }
     });
-  event.preventDefault();
+    event.preventDefault();
 });
 
 $('#update_instance').on('hidden.bs.modal',function(){

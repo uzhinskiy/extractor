@@ -91,6 +91,14 @@ type nodesArray struct {
 	sum  int
 }
 
+type Index struct {
+	Name   string
+	Size   int
+	Shards []int
+}
+
+type Indices map[string]*Index
+
 func Run(cnf config.Config) {
 	rt := Router{}
 	rt.conf = cnf
@@ -260,57 +268,47 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			var snap_status snapStatus
 			_ = json.Unmarshal(status_response, &snap_status)
 
+			indices := make(Indices)
+
 			for _, iname := range request.Values.Indices {
 				ind := snap_status.Snapshots[0].Indices[iname]
-
-				if ind.ShardsStats.Total == 1 {
-					if ind.Stats.Total.Size < rt.nodes.max {
-
-						req := map[string]interface{}{
-							"ignore_unavailable":   false,
-							"include_global_state": false,
-							"include_aliases":      false,
-							"rename_pattern":       "(.+)",
-							"rename_replacement":   "restored_$1",
-							"indices":              request.Values.Indices,
-							"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
-						}
-
-						response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
-						if err != nil {
-							http.Error(w, err.Error(), 500)
-							log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
-							return
-						}
-						w.Write(response)
-
-					} else {
-						msg := fmt.Sprintf("{\"error\":\"Restore index '%s' failed with: Not enough space\"}", iname)
-						http.Error(w, msg, 600)
-						log.Println(request.Action, "\t", 600, "\t", "Restore index '", iname, "' failed with: not enough space")
-						return
+				indices[iname] = &Index{}
+				indices[iname].Size = ind.Stats.Total.Size
+				if ind.ShardsStats.Total > 0 {
+					for s := range snap_status.Snapshots[0].Indices[iname].Shards {
+						indices[iname].Shards = append(indices[iname].Shards, snap_status.Snapshots[0].Indices[iname].Shards[s].Stats.Total.Size)
 					}
-				} else { // индексы с snapshots >1 - пока восстанавливаем без проверок
-					req := map[string]interface{}{
-						"ignore_unavailable":   false,
-						"include_global_state": false,
-						"include_aliases":      false,
-						"rename_pattern":       "(.+)",
-						"rename_replacement":   "restored_$1",
-						"indices":              request.Values.Indices,
-						"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
-					}
-
-					response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
-					if err != nil {
-						http.Error(w, err.Error(), 500)
-						log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
-						return
-					}
-					w.Write(response)
 				}
+			}
 
-			} // end for
+			index_list_for_restore, index_list_not_restore := rt.Barrel(indices)
+
+			req := map[string]interface{}{
+				"ignore_unavailable":   false,
+				"include_global_state": false,
+				"include_aliases":      false,
+				"rename_pattern":       "(.+)",
+				"rename_replacement":   "restored_$1",
+				"indices":              index_list_for_restore,
+				"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
+			}
+
+			fmt.Println(req)
+
+			response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", response)
+				return
+			}
+
+			if len(index_list_not_restore) > 0 {
+				msg := fmt.Sprintf("{\"message\":\"Indices '%v' will not be restored: Not enough space\", \"error\":1}", index_list_not_restore)
+				w.Write([]byte(msg))
+			}
+
+			msg := fmt.Sprintf("{\"message\":\"Indices '%v' will be restored\", \"error\":0}", index_list_for_restore)
+			w.Write([]byte(msg))
 
 		}
 
@@ -323,6 +321,31 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+}
+
+func (rt *Router) Barrel(array Indices) ([]string, []string) {
+	var (
+		k  int
+		Sk int
+		a  []string
+		b  []string
+	)
+
+	for name, ind := range array {
+		for n := range rt.nodes.list {
+			for m := range ind.Shards {
+				k = rt.nodes.list[n] / ind.Shards[m]
+				Sk = Sk + k
+			}
+		}
+
+		if Sk > len(ind.Shards) {
+			a = append(a, name)
+		} else {
+			b = append(b, name)
+		}
+	}
+	return a, b
 }
 
 func (rt *Router) getNodes() ([]singleNode, error) {

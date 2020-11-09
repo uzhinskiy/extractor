@@ -105,13 +105,59 @@ POST /_snapshot/my_repository/snapshot_2/_restore?wait_for_completion=false
 
 curl  "http://localhost:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wait_for_completion=false" -H "Content-type: application/json" -d'
 {
-  "indices": "mp-2020.11.01",
-  "ignore_unavailable": true,
-  "include_global_state": false,
-  "rename_pattern": "(.+)",
-  "rename_replacement": "restored_$1",
-  "include_aliases": false
+  "indices": "boris,filebeat-2020.10.10",   "ignore_unavailable": true,   "include_global_state": false,   "rename_pattern": "(.+)",   "rename_replacement": "restored_$1",   "include_aliases": false
 }'
 
+curl -ks https://opendistro:9200/_cat/indices/restored*?health=green
 
+			for _, iname := range request.Values.Indices {
+				ind := snap_status.Snapshots[0].Indices[iname]
 
+				if ind.ShardsStats.Total == 1 {
+					if ind.Stats.Total.Size < rt.nodes.max {
+
+						req := map[string]interface{}{
+							"ignore_unavailable":   false,
+							"include_global_state": false,
+							"include_aliases":      false,
+							"rename_pattern":       "(.+)",
+							"rename_replacement":   "restored_$1",
+							"indices":              request.Values.Indices,
+							"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
+						}
+
+						response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
+						if err != nil {
+							http.Error(w, err.Error(), 500)
+							log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+							return
+						}
+						w.Write(response)
+
+					} else {
+						msg := fmt.Sprintf("{\"error\":\"Restore index '%s' failed with: Not enough space\"}", iname)
+						http.Error(w, msg, 600)
+						log.Println(request.Action, "\t", 600, "\t", "Restore index '", iname, "' failed with: not enough space")
+						return
+					}
+				} else { // индексы с snapshots >1 - пока восстанавливаем без проверок
+					req := map[string]interface{}{
+						"ignore_unavailable":   false,
+						"include_global_state": false,
+						"include_aliases":      false,
+						"rename_pattern":       "(.+)",
+						"rename_replacement":   "restored_$1",
+						"indices":              request.Values.Indices,
+						"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
+					}
+
+					response, err := rt.doPost(rt.conf.Elastic.Host+"_snapshot/"+request.Values.Repo+"/"+request.Values.Snapshot+"/_restore?wait_for_completion=false", req)
+					if err != nil {
+						http.Error(w, err.Error(), 500)
+						log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+						return
+					}
+					w.Write(response)
+				}
+
+			} // end for
