@@ -356,7 +356,7 @@ func (rt *Router) getNodes() ([]singleNode, error) {
 	//	rt.nodes.RLock()
 	//	defer rt.nodes.RUnlock()
 
-	response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&bytes=b&h=ip,name,dt,du,dup,d")
+	response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/nodes?format=json&bytes=b&h=ip,name,dt,du,dup,d&s=name")
 	if err != nil {
 		return nil, err
 	}
