@@ -14,18 +14,29 @@
 package router
 
 import (
-	"encoding/json"
-	"net/http"
-
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net/http"
 
 	"bytes"
 	"net"
 
 	"time"
 )
+
+type esError struct {
+	Error struct {
+		RootCause []struct {
+			Type   string `json:"type"`
+			Reason string `json:"reason"`
+		} `json:"root_cause"`
+		Type   string `json:"type"`
+		Reason string `json:"reason"`
+	} `json:"error"`
+	Status int `json:"status"`
+}
 
 func (rt *Router) netClientPrepare() {
 	var netTransport = &http.Transport{
@@ -82,13 +93,15 @@ func (rt *Router) doPost(url string, request map[string]interface{}) ([]byte, er
 		return nil, err
 	}
 
-	if actionResult.StatusCode != 200 {
-		return nil, errors.New("Wrong response: " + actionResult.Status)
-	}
-
 	body, err := ioutil.ReadAll(actionResult.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if actionResult.StatusCode != 200 {
+		var e esError
+		_ = json.Unmarshal(body, &e)
+		return nil, errors.New(e.Error.Reason)
 	}
 
 	return body, nil

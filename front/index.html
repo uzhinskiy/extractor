@@ -354,7 +354,7 @@ $("#restore").click(function(){
         }
       },
       error: function (data) {
-        $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.responseJSON.message+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
+        $("#result").html('<div class="alert alert-danger alert-dismissible fade show">'+data.responseJSON.error+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>')
       }
     });
     event.preventDefault();
