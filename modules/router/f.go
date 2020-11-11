@@ -52,6 +52,32 @@ func (rt *Router) netClientPrepare() {
 	}
 }
 
+func (rt *Router) doDel(url string) ([]byte, error) {
+
+	actionRequest, _ := http.NewRequest("DELETE", url, nil)
+	actionRequest.Header.Set("Content-Type", "application/json")
+	actionRequest.Header.Set("Connection", "keep-alive")
+
+	actionResult, err := rt.nc.Do(actionRequest)
+	if actionResult != nil {
+		defer actionResult.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if actionResult.StatusCode != 200 {
+		return nil, errors.New("Wrong response: " + actionResult.Status)
+	}
+
+	body, err := ioutil.ReadAll(actionResult.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
 func (rt *Router) doGet(url string) ([]byte, error) {
 
 	actionRequest, _ := http.NewRequest("GET", url, nil)

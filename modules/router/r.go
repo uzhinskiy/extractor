@@ -42,6 +42,7 @@ type apiRequest struct {
 		Indices  []string `json:"indices,omitempty"`
 		Repo     string   `json:"repo,omitempty"`
 		Snapshot string   `json:"snapshot,omitempty"`
+		Index    string   `json:"index,omitempty"`
 	} `json:"values,omitempty"`
 }
 
@@ -91,13 +92,13 @@ type nodesArray struct {
 	sum  int
 }
 
-type Index struct {
+type IndexInSnap struct {
 	Name   string
 	Size   int
 	Shards []int
 }
 
-type Indices map[string]*Index
+type IndicesInSnap map[string]*IndexInSnap
 
 func Run(cnf config.Config) {
 	rt := Router{}
@@ -194,7 +195,25 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "get_indices":
 		{
-			response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/indices/restored*?s=i&format=json")
+			//response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/indices/restored*?s=i&format=json")
+			response, err := rt.doGet(rt.conf.Elastic.Host + "restored*/_recovery/")
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+
+			w.Write(response)
+		}
+
+	case "del_index":
+		{
+			if request.Values.Index == "" {
+				http.Error(w, err.Error(), 500)
+				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
+				return
+			}
+			response, err := rt.doDel(rt.conf.Elastic.Host + request.Values.Index)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
@@ -235,13 +254,13 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + request.Values.Repo + "/" + request.Values.Snapshot)
+			status_response, err := rt.doGet(rt.conf.Elastic.Host + "_snapshot/" + request.Values.Repo + "/" + request.Values.Snapshot + "/_status")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
 				return
 			}
-			w.Write(response)
+			w.Write(status_response)
 		}
 
 	case "restore":
@@ -268,11 +287,11 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			var snap_status snapStatus
 			_ = json.Unmarshal(status_response, &snap_status)
 
-			indices := make(Indices)
+			indices := make(IndicesInSnap)
 
 			for _, iname := range request.Values.Indices {
 				ind := snap_status.Snapshots[0].Indices[iname]
-				indices[iname] = &Index{}
+				indices[iname] = &IndexInSnap{}
 				indices[iname].Size = ind.Stats.Total.Size
 				if ind.ShardsStats.Total > 0 {
 					for s := range snap_status.Snapshots[0].Indices[iname].Shards {
@@ -323,7 +342,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (rt *Router) Barrel(array Indices) ([]string, []string) {
+func (rt *Router) Barrel(array IndicesInSnap) ([]string, []string) {
 	var (
 		k  int
 		Sk int
