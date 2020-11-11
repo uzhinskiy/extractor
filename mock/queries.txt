@@ -99,8 +99,15 @@ POST /_snapshot/my_repository/snapshot_2/_restore?wait_for_completion=false
   "include_global_state": false,
   "rename_pattern": "(.+)",
   "rename_replacement": "restored_$1",
-  "include_aliases": false
+  "include_aliases": false,
+  "index_settings": {
+    "index.number_of_replicas": 0
+  },
+  "ignore_index_settings": [
+    "index.creation_date"
+  ]
 }
+
 
 
 curl  "http://localhost:9200/_snapshot/s3-backup/mp-2020.11.02/_restore?wait_for_completion=false" -H "Content-type: application/json" -d'

@@ -22,7 +22,7 @@ import (
 	"path"
 	"strings"
 
-	//	"sync"
+	"time"
 
 	"github.com/uzhinskiy/extractor/modules/config"
 	"github.com/uzhinskiy/extractor/modules/front"
@@ -282,13 +282,13 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			index_list_for_restore, index_list_not_restore := rt.Barrel(indices)
-
+			t := time.Now()
 			req := map[string]interface{}{
 				"ignore_unavailable":   false,
 				"include_global_state": false,
 				"include_aliases":      false,
 				"rename_pattern":       "(.+)",
-				"rename_replacement":   "restored_$1",
+				"rename_replacement":   fmt.Sprintf("restored_$1-%s",t.Format("02-01-2006")),
 				"indices":              index_list_for_restore,
 				"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
 			}
