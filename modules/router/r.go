@@ -196,7 +196,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	case "get_indices":
 		{
 			//response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/indices/restored*?s=i&format=json")
-			response, err := rt.doGet(rt.conf.Elastic.Host + "restored*/_recovery/")
+			response, err := rt.doGet(rt.conf.Elastic.Host + "extracted*/_recovery/")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())
@@ -307,7 +307,7 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 				"include_global_state": false,
 				"include_aliases":      false,
 				"rename_pattern":       "(.+)",
-				"rename_replacement":   fmt.Sprintf("restored_$1-%s", t.Format("02-01-2006")),
+				"rename_replacement":   fmt.Sprintf("extracted_$1-%s", t.Format("02-01-2006")),
 				"indices":              index_list_for_restore,
 				"index_settings":       map[string]interface{}{"index.number_of_replicas": 0},
 			}
