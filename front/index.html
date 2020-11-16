@@ -60,6 +60,7 @@ body {
         <h1 class="my-4">Snapshots list
           <small id="selectedsnap"></small>
         </h1>
+        <small  class="text-monospace">Attention! The <strong>SNAPSHOT-2020.05.06</strong> contains the index for the <strong>previous</strong> day.</small>
         
         <div class="d-flex align-items-center invisible" id="loading"><strong>Loading...</strong><div class="spinner-border ml-auto" role="status" aria-hidden="true"></div></div>
         <ul class="list-unstyled mb-0 overflow-auto" style="max-height: 800px;" id="snapshotlist"> </ul>
@@ -74,6 +75,9 @@ body {
           <div class="card-body">
             <ul class="list-unstyled list-group mb-0" id="indlist"> </ul>
           </div>
+          <div class="card-footer bg-warning">
+            <small  class="text-monospace">Attention! The <strong>extracted_*</strong> indices will be deleted 48 hours after they were created.</small>
+          </div>        
         </div>
     </div>
     <!-- /.row -->
@@ -302,7 +306,7 @@ $('#repolist').on('click', 'a.repos', function(e) {
             restore_button = "";
           }
 
-          str += "<li><h4 class='font-weight-bold  list-group-item list-group-item-action' title='"+status+"'>"+icon+" <strong>" + snapshot + "</strong> created at " + hdate + restore_button +"</h4></li>";
+          str += "<li><h5 class='font-weight-bold  list-group-item list-group-item-action' title='"+status+"'>"+icon+" <strong>" + snapshot + "</strong> created at " + hdate + restore_button +"</h5></li>";
         }
 
         $("#loading").addClass('invisible');
