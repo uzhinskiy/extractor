@@ -4,4 +4,6 @@ app:
 elastic:
   host: http://localhost:9200/
   ssl: false
+  username: elastic
+  password: elastic
   certfile: ./ca.crt
