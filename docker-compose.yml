@@ -1,0 +1,21 @@
+version: "2.0"
+networks:
+  internal_network:
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    extra_hosts:
+       elasticsearch: 10.4.3.224 #Elasticsearch IP
+    networks:
+      - internal_network
+    image: extractor
+    hostname: es-ext
+    ports:
+      - "0.0.0.0:9400:9400"
+    expose:
+      - "9400"
+    volumes:
+      - ./main.yml:/app/main.yml

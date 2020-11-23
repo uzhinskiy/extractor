@@ -1,5 +1,5 @@
 var getnodes = setInterval(NodeStatus, 5000);
-var getindices = setInterval(IndexList, 3000);
+var getindices = setInterval(function(){IndexList("extracted*")}, 3000);
 
 function bytesToSize(bytes) {
    var sizes = ['b', 'kb', 'mb', 'gb', 'tb'];
@@ -8,9 +8,12 @@ function bytesToSize(bytes) {
    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
 }
 
-function IndexList() {
+function IndexList(ipattern) {
     var post = {
-      "action": "get_indices"
+      "action": "get_indices",
+      "values": {
+        "ipattern": ipattern
+      } 
     };
     
     $.ajax({
@@ -139,7 +142,7 @@ $(document).ready(function(){
     });
 
     NodeStatus();
-    IndexList();
+    IndexList("extracted*");
 });
 
 $('#repolist').on('click', 'a.repos', function(e) {

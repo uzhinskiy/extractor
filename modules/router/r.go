@@ -43,6 +43,7 @@ type apiRequest struct {
 		Repo     string   `json:"repo,omitempty"`
 		Snapshot string   `json:"snapshot,omitempty"`
 		Index    string   `json:"index,omitempty"`
+		Ipattern string   `json:"ipattern,omitempty"`
 	} `json:"values,omitempty"`
 }
 
@@ -196,7 +197,10 @@ func (rt *Router) ApiHandler(w http.ResponseWriter, r *http.Request) {
 	case "get_indices":
 		{
 			//response, err := rt.doGet(rt.conf.Elastic.Host + "_cat/indices/restored*?s=i&format=json")
-			response, err := rt.doGet(rt.conf.Elastic.Host + "extracted*/_recovery/")
+			if request.Values.Ipattern == "" {
+				request.Values.Ipattern = "*"
+			}
+			response, err := rt.doGet(rt.conf.Elastic.Host + request.Values.Ipattern + "/_recovery/")
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				log.Println(remoteIP, "\t", r.Method, "\t", r.URL.Path, "\t", request.Action, "\t", 500, "\t", err.Error(), "\t", r.UserAgent())

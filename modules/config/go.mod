@@ -1,1 +1,1 @@
-module github.com/uzhinskiy/extractor/config
+module github.com/uzhinskiy/extractor/modules/config

@@ -2,8 +2,12 @@ app:
   port: 9400
   timeout: 60
 elastic:
-  host: http://localhost:9200/
-  ssl: false
+  host: http://elasticsearch:9200/
+# use this fields if elastic requires BA
   username: elastic
   password: elastic
-  certfile: ./ca.crt
+  ssl: false
+indices:
+  prefix: extracted
+  retention: 48h
+  
